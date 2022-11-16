@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- <link href="https://cdn.bootcdn.net/ajax/libs/pure/3.0.0/base-context-min.css" rel="stylesheet"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+    <title>quant macd deviation</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>quant macd deviation</h1>
+
+        </div>
+        <div>
+            <h1>v1</h1>
+<pre class="codehilite"><code class="language-python">def find_deviation_top(df: DataFrame):
+    # d1 = df[-300:]
+    d1 = df.copy()
+    index1 = d1['macd'].idxmax()
+    p1 = df.iloc[index1]
+    p1_max = p1['h']
+    d2 = df[index1 + 1:]
+    if len(d2) == 0:
+        return None
+    d2_max = d2['h'].max()
+    index2 = d2['h'].idxmax()
+    p2 = df.iloc[index2]
+    if d2_max &gt; p1_max:
+        if p2['macd'] &lt; p1['macd']:
+            return (p1, p2)
+        return None
+
+    else:
+        return None
+
+
+def find_deviation_bottom(df: DataFrame):
+    # d1 = df[-300:]
+    d1 = df.copy()
+    index1 = d1['macd'].idxmin()
+    p1 = df.iloc[index1]
+    p1_min = p1['l']
+    d2 = df[index1 + 1:]
+    if len(d2) == 0:
+        return None
+    d2_min = d2['l'].min()
+    index2 = d2['l'].idxmin()
+    p2 = df.iloc[index2]
+
+    if d2_min &lt; p1_min:
+        if p2['macd'] &gt; p1['macd']:
+            return None
+        return (p1, p2)
+
+    else:
+        return None
+</code></pre>
+
+<p>date    2022-10-26 20:00:00</p>
+<p>date    2022-11-04 20:00:00</p>
+<p>代码显示这两个点满足</p>
+<h1>V2</h1>
+<pre class="codehilite"><code class="language-python">def find_deviation_top(df: DataFrame):
+    d1 = df[-300:]
+    # d1 = df
+    index1 = d1['macd'].idxmax()
+    p1 = df.iloc[index1]
+    p1_max = p1['h']
+    d2 = df[index1 + 5:]
+    if len(d2) == 0:
+        return None
+    index2 = d2['macd'].idxmax()
+    p2 = df.iloc[index2]
+    if p2['h'] &gt; p1_max:
+        if p2['macd'] &lt; p1['macd']:
+            return (p1, p2)
+        return None
+
+    else:
+        return None
+
+
+def find_deviation_bottom(df: DataFrame):
+    d1 = df[-300:]
+    # d1 = df
+    index1 = d1['macd'].idxmin()
+    p1 = df.iloc[index1]
+    d2 = df[index1 + 5:]
+    if len(d2) == 0:
+        return None
+    index2 = d2['macd'].idxmin()()
+    p2 = df.iloc[index2]
+    if p2['l'] &lt; p1['l']:
+        if p2['macd'] &gt; p1['macd']:
+            return [p1, p2]
+        return None
+
+    else:
+        return None
+</code></pre>
+
+<p>test eth 4h</p>
+<p>date    2022-10-26 20:00:00</p>
+<p>date    2022-11-05 08:00:00</p>
+<p>代码显示这两个点满足</p>
+<h1>v3</h1>
+<p>沿用的是2，但是取值上不固定死</p>
+<h1>15m test</h1>
+<pre class="codehilite"><code class="language-python">import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake, macd
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+
+class B2_1(BaseTest):
+
+    def __init__(self, data, balance, margin, leverage, commission, fix_win, fix_loss):
+        super().__init__(data, balance, margin, leverage, commission)
+        self.fix_win = fix_win
+        self.fix_loss = fix_loss
+
+    def close_try(self):
+        if self.has_position:
+            if self.max_loss() &lt; self.fix_loss:
+                self.close_profit(self.fix_loss)
+                print(&quot;k inner loss&quot;)
+
+    def next(self):
+        super().next()
+
+        if self.has_position:
+            self.out()
+        else:
+            if len(self.df) &gt; 300:
+                self.entry()
+
+    def entry(self):
+        k = self.now_k
+        # print(self.df)
+        top = macd.find_deviation_top(self.df[-300:])
+        if top is not None:
+            # print(top)
+            if top[1]['t'] == k['t']:
+                self.buy_short(k['c'],self.df[-20:]['h'].max())
+                return
+        bottom = macd.find_deviation_bottom(self.df)
+        if bottom is not None:
+            # print(bottom)
+            if bottom[1]['t'] == k['t']:
+                self.buy_long(k['c'],self.df[-20:]['l'].min())
+                return
+
+    def out(self):
+        # super().out()
+        if self.has_position:
+            if self.max_loss() &lt; self.fix_loss:
+                self.close_profit(self.fix_loss, 'final loss')
+                return
+            if self.max_win() &gt; self.fix_win:
+                self.close_profit(self.fix_win, 'final win')
+                return
+
+
+
+
+from util import timeutil as tu
+
+
+path = &quot;E:\\coding\\coin_data\\15m\\all.csv&quot;
+
+t1 = tu.now_ms()
+df = pd.read_csv(path, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5], names=['t', 'o', 'h', 'l', 'c', 'v'])
+
+df = df.sort_values('t', ascending=True)
+df = df[1:]
+dt = pd.to_numeric(df['t'])
+df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+df['t'] = df['t'] + h8
+df['date'] = pd.to_datetime(df['t'], unit='ms')
+df = nake.nake_convert(df)
+df = macd.cal_macd(df)
+all = 3000
+margin = 1000
+fix_win = 20 / 100
+fix_loss = -40 / 100
+
+
+
+bt = B2_1(df[100:], all, margin, 5, 5 / 10000, fix_win, fix_loss)
+bt.run()
+print(
+    f&quot;now balance {bt.balance:.2f} total times {bt.entry_times} total fee {bt.total_commission:.2f} fix_win {fix_win}，&quot;
+    f&quot; fix_loss {fix_loss} total balance {all}  margin {margin}  &quot;)
+print(f&quot;win times  {bt.win_times} loss times {bt.loss_times} &quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+
+output = pd.DataFrame(bt.orders)
+
+output.to_csv('record.csv')
+</code></pre>
+
+<p>now balance 4800.00 total times 120 total fee 600.00 fix_win 0.2， fix_loss -0.4 total balance 3000  margin 1000<br />
+win times  84 loss times 36 </p>
+
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>

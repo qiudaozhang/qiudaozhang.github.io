@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- <link href="https://cdn.bootcdn.net/ajax/libs/pure/3.0.0/base-context-min.css" rel="stylesheet"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+    <title>mysql删除10天前的数据</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>mysql删除10天前的数据</h1>
+
+        </div>
+        <div>
+            <p>假设有一个表的字段存储时间戳毫秒</p>
+<p>当前</p>
+<pre class="codehilite"><code class="language-sql">SELECT NOW();
+</code></pre>
+
+<p>然后加-10天</p>
+<pre class="codehilite"><code class="language-sql">SELECT DATE_ADD(NOW(),INTERVAL -10 DAY)
+</code></pre>
+
+<p>变成秒</p>
+<pre class="codehilite"><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY))
+</code></pre>
+
+<p>我们需要的是毫秒</p>
+<pre class="codehilite"><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000;
+</code></pre>
+
+<p>现在我们依据时间删除就可以搞了</p>
+<pre class="codehilite"><code class="language-sql">DELETE FROM future_kline WHERE i = '1m' AND t &lt;= SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000
+</code></pre>
+
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>
