@@ -493,12 +493,20 @@ class SingleMa(BaseStrategy):
                 self.close()
                 return
 </code></pre>
-<ul>
-<li>完善点：</li>
-<li>多空都根据简单的20K计算了一个防守价格</li>
-<li>固有缺陷：</li>
-<li>bias验证可能失手直接破掉</li>
-</ul>
+<table class="table">
+<thead>
+<tr>
+<th>优点</th>
+<th>缺陷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多空都根据简单的20K计算了一个防守价格</td>
+<td>bias验证可能失守直接破掉</td>
+</tr>
+</tbody>
+</table>
 <p>此时计算的loss price 为1187</p>
 <p>然后我们分析发现当前bias_rate超过1的都不多，所以再调整下</p>
 <p>【v5-y1】</p>
@@ -533,13 +541,11 @@ class SingleMa(BaseStrategy):
         if sdf['bias_rate'].gt(0).all():
             logger.info(k['bias_rate'])
             if 0 &lt; k['bias_rate'] &lt; bias_closer:
-                # logger.info('may long')
                 self.open_long()
                 return
         if sdf['bias_rate'].lt(0).all():
             if 0 &gt; k['bias_rate'] &gt; -bias_closer:
                 self.open_short()
-                # logger.info('may short')
                 return
 
     def handle_win_out(self):
@@ -563,7 +569,6 @@ class SingleMa(BaseStrategy):
     def handle_loss_out(self):
         k = self.k
         c = k['c']
-        # logger.info(f&quot;loss {self.get_unrealize_profit()}&quot;)
         super().handle_loss_out()
         apm = abs(self.get_price_move())
         apm_rate = apm / k['c']
@@ -695,14 +700,12 @@ class SingleMa(BaseStrategy):
 <tr>
 <th>改进</th>
 <th>缺陷</th>
-<th></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>如果超大损失，直接close，能避免再大的loss，虽然之前已经处<br />理了loss_price，但是如果算出来的这个值距离很远，很可能就已经<br />爆仓了，所以这一步有必要处理</td>
+<td>如果超大损失，直接close，能避免再大的loss，虽然之前已经处理了<br />loss_price，但是如果算出来的这个值距离很远，很可能就已经爆仓<br />了，所以这一步有必要处理</td>
 <td>但如果插完之后里面回到原有水平就白亏，所以这是个两难的问题</td>
-<td></td>
 </tr>
 </tbody>
 </table>
@@ -807,6 +810,154 @@ class SingleMa(BaseStrategy):
                 self.close()
                 return
 </code></pre>
+<p>还有问题吗，其实也有，如果是很小的震动，即使以连续反向突破7k作为平仓依据也不太好，最好还是加上1%的振幅</p>
+<p>【v5-y4】</p>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        p = 20
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.SMA(df['c'], p)  # p 为MA的周期 比如20
+        df['bias'] = df['c'] - df['ma']  # bias 描述和ma的差值
+        df['bias_rate'] = df['bias'] / df['ma']  # 百分比可以得到一个偏移率
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        if sdf['bias_rate'].gt(0).all():
+            logger.info(k['bias_rate'])
+            if 0 &lt; k['bias_rate'] &lt; bias_closer:
+                # logger.info('may long')
+                self.open_long()
+                return
+        if sdf['bias_rate'].lt(0).all():
+            if 0 &gt; k['bias_rate'] &gt; -bias_closer:
+                self.open_short()
+                # logger.info('may short')
+                return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        logger.info(f&quot;loss {self.get_unrealize_profit():.4f}&quot;)
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+        if self.has_order:
+            if apm_rate &gt; 1 / 100:
+                self.reverse_break_close()
+                if self.has_order:
+                    if self.is_now_long():
+                        if self.df[-7:]['bias_rate'].lt(0).all():
+                            self.close()
+                            return
+                    if self.is_now_short():
+                        if self.df[-7:]['bias_rate'].gt(0).all():
+                            self.close()
+                            return
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+</code></pre>
+<p>到此，我们可以梳理下问题</p>
+<table class="table">
+<thead>
+<tr>
+<th>问题</th>
+<th>是否解决</th>
+<th>解决办法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向</td>
+<td>是</td>
+<td>连续的ma的单边性</td>
+</tr>
+<tr>
+<td>入场价格</td>
+<td>是</td>
+<td>bias接近率</td>
+</tr>
+<tr>
+<td>止损</td>
+<td>是</td>
+<td>计算止损、最大止损、反向连续突破性止损</td>
+</tr>
+<tr>
+<td>止盈</td>
+<td>是</td>
+<td>最大止盈、bias偏移过大止盈、较长利润之后的连续反向突破止盈</td>
+</tr>
+<tr>
+<td>频率问题</td>
+<td>否</td>
+<td>根选择的周期关系很大，15m 1h 4h...</td>
+</tr>
+<tr>
+<td>震荡性反复亏损</td>
+<td>否</td>
+<td>如果单边性不强，这个问题现有逻辑无法解决</td>
+</tr>
+<tr>
+<td>恶意插针</td>
+<td>否</td>
+<td>这个问题无法预测，无好的解决办法</td>
+</tr>
+</tbody>
+</table>
 
         </div>
     </div>
