@@ -24,7 +24,7 @@
         </div>
         <div>
             <h2>v1</h2>
-<pre class="codehilite"><code class="language-python">def find_deviation_top(df: DataFrame):
+<pre><code class="language-python">def find_deviation_top(df: DataFrame):
     # d1 = df[-300:]
     d1 = df.copy()
     index1 = d1['macd'].idxmax()
@@ -66,12 +66,11 @@ def find_deviation_bottom(df: DataFrame):
     else:
         return None
 </code></pre>
-
 <p>date    2022-10-26 20:00:00</p>
 <p>date    2022-11-04 20:00:00</p>
 <p>代码显示这两个点满足</p>
 <h2>V2</h2>
-<pre class="codehilite"><code class="language-python">def find_deviation_top(df: DataFrame):
+<pre><code class="language-python">def find_deviation_top(df: DataFrame):
     d1 = df[-300:]
     # d1 = df
     index1 = d1['macd'].idxmax()
@@ -108,8 +107,8 @@ def find_deviation_bottom(df: DataFrame):
 
     else:
         return None
-</code></pre>
 
+</code></pre>
 <p>test eth 4h</p>
 <p>date    2022-10-26 20:00:00</p>
 <p>date    2022-11-05 08:00:00</p>
@@ -117,7 +116,7 @@ def find_deviation_bottom(df: DataFrame):
 <h2>v3</h2>
 <p>沿用的是2，但是取值上不固定死</p>
 <h1>15m test</h1>
-<pre class="codehilite"><code class="language-python">import pandas as pd
+<pre><code class="language-python">import pandas as pd
 
 from daotest.BaseTest import BaseTest
 from findex import nake, macd
@@ -220,8 +219,8 @@ print((t3 - t2) / 1000)
 output = pd.DataFrame(bt.orders)
 
 output.to_csv('record.csv')
-</code></pre>
 
+</code></pre>
 <p>now balance 4800.00 total times 120 total fee 600.00 fix_win 0.2， fix_loss -0.4 total balance 3000  margin 1000<br />
 win times  84 loss times 36 </p>
 

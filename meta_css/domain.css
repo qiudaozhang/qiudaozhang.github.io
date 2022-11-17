@@ -31,3 +31,7 @@ ul.title_li_show li {
     font-weight: 400;
     margin-top: 10px;
 }
+
+code {
+    background-color: rgb(246, 248, 250)!important;
+}

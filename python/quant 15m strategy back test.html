@@ -24,7 +24,7 @@
         </div>
         <div>
             <h2>V1</h2>
-<pre class="codehilite"><code class="language-py">import pandas as pd
+<pre><code class="language-py">import pandas as pd
 import talib
 
 from daotest.BaseTest import BaseTest
@@ -122,9 +122,8 @@ print((t3 - t2) / 1000)
 #
 # output.to_csv('record.csv')
 </code></pre>
-
 <h2>v2</h2>
-<pre class="codehilite"><code class="language-python">class Break_It(BaseTest):
+<pre><code class="language-python">class Break_It(BaseTest):
 
     def __init__(self, data, balance, margin, leverage, commission, fix_win, fix_loss):
         super().__init__(data, balance, margin, leverage, commission)
@@ -174,7 +173,6 @@ print((t3 - t2) / 1000)
                 self.close(k['o'])
                 return
 </code></pre>
-
 <p>条件</p>
 <ul>
 <li>15m</li>

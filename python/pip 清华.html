@@ -24,24 +24,19 @@
         </div>
         <div>
             <h2>临时使用</h2>
-<pre class="codehilite"><code>pip install -i https://pypi.tuna.tsinghua.edu.cn/simple some-package
+<pre><code>pip install -i https://pypi.tuna.tsinghua.edu.cn/simple some-package
 </code></pre>
-
 <h2>永久</h2>
-<pre class="codehilite"><code class="language-bash">python -m pip install --upgrade pip
+<pre><code class="language-bash">python -m pip install --upgrade pip
 </code></pre>
-
-<pre class="codehilite"><code class="language-bash">pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+<pre><code class="language-bash">pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 </code></pre>
-
 <h2>取消</h2>
-<pre class="codehilite"><code class="language-bash">pip config unset global.index-url
+<pre><code class="language-bash">pip config unset global.index-url
 </code></pre>
-
 <h2>查看现在用的</h2>
-<pre class="codehilite"><code class="language-bash">pip config list
+<pre><code class="language-bash">pip config list
 </code></pre>
-
 <blockquote>
 <p>global.index-url='https://pypi.tuna.tsinghua.edu.cn/simple'</p>
 </blockquote>

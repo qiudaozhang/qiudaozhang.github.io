@@ -23,7 +23,7 @@
             <h1>binance get all future symbol</h1>
         </div>
         <div>
-            <pre class="codehilite"><code class="language-python">import pandas as pd
+            <pre><code class="language-python">import pandas as pd
 from binance.um_futures import UMFutures
 from db import db
 umf = UMFutures()
@@ -37,6 +37,7 @@ for d in data:
             if len(db.query(sql))  == 0:
                 exe_sql = f&quot;insert into sub_s  (s,is_main)  value ('{s}',0)&quot;
                 db.execute(exe_sql)
+
 </code></pre>
 
         </div>

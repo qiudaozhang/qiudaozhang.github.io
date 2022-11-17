@@ -52,14 +52,13 @@
 </ol>
 <h2>wechatpay-java</h2>
 <p>引入依赖</p>
-<pre class="codehilite"><code class="language-xml">&lt;dependency&gt;
+<pre><code class="language-xml">&lt;dependency&gt;
   &lt;groupId&gt;com.github.wechatpay-apiv3&lt;/groupId&gt;
   &lt;artifactId&gt;wechatpay-java&lt;/artifactId&gt;
   &lt;version&gt;0.2.0&lt;/version&gt;
 &lt;/dependency&gt;
 </code></pre>
-
-<pre class="codehilite"><code class="language-java">import com.wechat.pay.java.core.Config;
+<pre><code class="language-java">import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAConfig;
 import com.wechat.pay.java.service.certificate.CertificateService;
 import com.wechat.pay.java.service.payments.nativepay.model.Amount;
@@ -117,7 +116,6 @@ public class QuickStart {
     }
 }
 </code></pre>
-
 <p>发现好像不太好使，一直报错</p>
 <h2>wechatpay-apache-httpclient</h2>
 <h2>WxJava</h2>
@@ -125,18 +123,16 @@ public class QuickStart {
 <p>支付相关的是</p>
 <p>weixin-java-pay</p>
 <p>如果要用starter</p>
-<pre class="codehilite"><code>wx-java-pay-spring-boot-starter
+<pre><code>wx-java-pay-spring-boot-starter
 </code></pre>
-
-<pre class="codehilite"><code class="language-xml">&lt;dependency&gt;
+<pre><code class="language-xml">&lt;dependency&gt;
   &lt;groupId&gt;com.github.binarywang&lt;/groupId&gt;
   &lt;artifactId&gt;wx-java-pay-spring-boot-starter&lt;/artifactId&gt;
   &lt;version&gt;4.4.4&lt;/version&gt;
 &lt;/dependency&gt;
 </code></pre>
-
 <p>配置</p>
-<pre class="codehilite"><code class="language-yaml">server:
+<pre><code class="language-yaml">server:
   port: 8089
 wx:
   pay:
@@ -154,9 +150,8 @@ wx:
     private-key-path: classpath:apiclient_key.pem
     private-cert-path: classpath:apiclient_cert.pem
 </code></pre>
-
 <p>用这个比较简单</p>
-<pre class="codehilite"><code class="language-java">WxPayUnifiedOrderV3Request request = new WxPayUnifiedOrderV3Request();
+<pre><code class="language-java">WxPayUnifiedOrderV3Request request = new WxPayUnifiedOrderV3Request();
 
 WxPayUnifiedOrderV3Request.Amount amount = new WxPayUnifiedOrderV3Request.Amount().setTotal(1);
 request.setOutTradeNo(tradeNo)

@@ -23,18 +23,16 @@
             <h1>docker mysql bin太大</h1>
         </div>
         <div>
-            <pre class="codehilite"><code class="language-sql">SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
+            <pre><code class="language-sql">SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
 </code></pre>
-
 <p>2592000</p>
 <p>修改</p>
-<pre class="codehilite"><code class="language-sql">SET GLOBAL binlog_expire_logs_seconds = 86400;
+<pre><code class="language-sql">SET GLOBAL binlog_expire_logs_seconds = 86400;
 
 flush logs;
 </code></pre>
-
 <p>清掉某个时间前的</p>
-<pre class="codehilite"><code class="language-sql">purge binary logs before '2022-11-10 12:00:00';
+<pre><code class="language-sql">purge binary logs before '2022-11-10 12:00:00';
 </code></pre>
 
         </div>

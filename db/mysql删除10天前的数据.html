@@ -25,23 +25,19 @@
         <div>
             <p>假设有一个表的字段存储时间戳毫秒</p>
 <p>当前</p>
-<pre class="codehilite"><code class="language-sql">SELECT NOW();
+<pre><code class="language-sql">SELECT NOW();
 </code></pre>
-
 <p>然后加-10天</p>
-<pre class="codehilite"><code class="language-sql">SELECT DATE_ADD(NOW(),INTERVAL -10 DAY)
+<pre><code class="language-sql">SELECT DATE_ADD(NOW(),INTERVAL -10 DAY)
 </code></pre>
-
 <p>变成秒</p>
-<pre class="codehilite"><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY))
+<pre><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY))
 </code></pre>
-
 <p>我们需要的是毫秒</p>
-<pre class="codehilite"><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000;
+<pre><code class="language-sql">SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000;
 </code></pre>
-
 <p>现在我们依据时间删除就可以搞了</p>
-<pre class="codehilite"><code class="language-sql">DELETE FROM future_kline WHERE i = '1m' AND t &lt;= SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000
+<pre><code class="language-sql">DELETE FROM future_kline WHERE i = '1m' AND t &lt;= SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000
 </code></pre>
 
         </div>

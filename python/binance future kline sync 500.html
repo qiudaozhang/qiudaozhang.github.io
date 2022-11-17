@@ -23,7 +23,7 @@
             <h1>binance future kline sync 500</h1>
         </div>
         <div>
-            <pre class="codehilite"><code class="language-python">import pandas as pd
+            <pre><code class="language-python">import pandas as pd
 
 from binance.um_futures import UMFutures
 from db import sub_s, db
@@ -48,6 +48,7 @@ for index, coin in coins.iterrows():
             sql = f&quot;replace into future_kline (s,i,t,o,c,h,l,v,q) value ('{s}','{i}',&quot; \
                   f&quot;{t},{o},{c},{h},{l},{v},{q}) &quot;
             db.execute(sql)
+
 </code></pre>
 
         </div>
