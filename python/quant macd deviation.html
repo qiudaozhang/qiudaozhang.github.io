@@ -5,8 +5,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
           integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <link rel="stylesheet" href="../meta_css//domain.css">
+
     <title>quant macd deviation</title>
 </head>
 <body>
@@ -23,7 +26,7 @@
             <h1>quant macd deviation</h1>
         </div>
         <div>
-            <h2>v1</h2>
+            <h2 id="v1">v1</h2>
 <pre><code class="language-python">def find_deviation_top(df: DataFrame):
     # d1 = df[-300:]
     d1 = df.copy()
@@ -69,7 +72,7 @@ def find_deviation_bottom(df: DataFrame):
 <p>date    2022-10-26 20:00:00</p>
 <p>date    2022-11-04 20:00:00</p>
 <p>代码显示这两个点满足</p>
-<h2>V2</h2>
+<h2 id="v2">V2</h2>
 <pre><code class="language-python">def find_deviation_top(df: DataFrame):
     d1 = df[-300:]
     # d1 = df
@@ -113,9 +116,9 @@ def find_deviation_bottom(df: DataFrame):
 <p>date    2022-10-26 20:00:00</p>
 <p>date    2022-11-05 08:00:00</p>
 <p>代码显示这两个点满足</p>
-<h2>v3</h2>
+<h2 id="v3">v3</h2>
 <p>沿用的是2，但是取值上不固定死</p>
-<h1>15m test</h1>
+<h1 id="15m-test">15m test</h1>
 <pre><code class="language-python">import pandas as pd
 
 from daotest.BaseTest import BaseTest
@@ -227,7 +230,7 @@ win times  84 loss times 36 </p>
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
         integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>

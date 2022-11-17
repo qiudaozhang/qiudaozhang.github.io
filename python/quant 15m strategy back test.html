@@ -5,8 +5,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
           integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <link rel="stylesheet" href="../meta_css//domain.css">
+
     <title>quant 15m strategy back test</title>
 </head>
 <body>
@@ -23,7 +26,7 @@
             <h1>quant 15m strategy back test</h1>
         </div>
         <div>
-            <h2>V1</h2>
+            <h2 id="v1">V1</h2>
 <pre><code class="language-py">import pandas as pd
 import talib
 
@@ -122,7 +125,7 @@ print((t3 - t2) / 1000)
 #
 # output.to_csv('record.csv')
 </code></pre>
-<h2>v2</h2>
+<h2 id="v2">v2</h2>
 <pre><code class="language-python">class Break_It(BaseTest):
 
     def __init__(self, data, balance, margin, leverage, commission, fix_win, fix_loss):
@@ -189,12 +192,12 @@ win times  46 loss times 77 </p>
 </ul>
 <p>now balance 3134.05 total times 284 total fee 852.00 fix_win 1.0， fix_loss -0.5 total balance 3000  margin 1000<br />
 win times  102 loss times 182 </p>
-<h2>v3</h2>
+<h2 id="v3">v3</h2>
 
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
         integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>

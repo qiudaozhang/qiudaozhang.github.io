@@ -5,8 +5,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
           integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <link rel="stylesheet" href="../meta_css//domain.css">
+
     <title>ma research</title>
 </head>
 <body>
@@ -23,7 +26,19 @@
             <h1>ma research</h1>
         </div>
         <div>
-            <p>预计要完成的内容</p>
+            <div class="toc">
+<ul>
+<li><a href="#single-ma">single ma</a><ul>
+<li><a href="#v1">v1</a></li>
+<li><a href="#v2">v2</a></li>
+<li><a href="#v3">v3</a></li>
+<li><a href="#v4">v4</a></li>
+<li><a href="#v5">v5</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<p>预计要完成的内容</p>
 <ol>
 <li>单均线交易</li>
 <li>双均线交易</li>
@@ -31,8 +46,8 @@
 <li>均线+裸K组合交易</li>
 <li>...</li>
 </ol>
-<h2>single ma</h2>
-<h3>v1</h3>
+<h2 id="single-ma">single ma</h2>
+<h3 id="v1">v1</h3>
 <pre><code class="language-python">import talib
 
 from db.fkline import find_csv
@@ -84,18 +99,29 @@ class SingleMa(BaseStrategy):
                 self.close()
                 return
 </code></pre>
-<ul>
-<li>
-<p>入场离场： 主要使用是否在ma之上则定方向</p>
-</li>
-<li>
-<p>固有缺陷</p>
-</li>
-<li>不知实际的高低，比如ma之上超高的位置open long，很容易引起巨大是loss</li>
-<li>可能是恰好当前一个ma之上，  实际上具体的大部分都是ma之下，可能恰好做反了</li>
-<li>一个K的反转里面out，几乎时刻都在open close，惨死</li>
-</ul>
-<h3>v2</h3>
+<table class="table">
+<thead>
+<tr>
+<th>优点</th>
+<th>缺陷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>解决了方向问题</td>
+<td>不知实际的高低，比如ma之上超高的位置open long，很容易引起巨大是loss</td>
+</tr>
+<tr>
+<td></td>
+<td>可能是恰好当前一个ma之上，  实际上具体的大部分都是ma之下，可能恰好做反了</td>
+</tr>
+<tr>
+<td></td>
+<td>一个K的反转里面out，几乎时刻都在open close，惨死</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v2">v2</h3>
 <pre><code class="language-python">import talib
 
 from db.fkline import find_csv
@@ -152,19 +178,29 @@ class SingleMa(BaseStrategy):
                 self.close()
                 return
 </code></pre>
-<ul>
-<li>完善点</li>
-<li>
-<p>要求连续几个都处于之上或之下，减少了偶然性</p>
-</li>
-<li>
-<p>固有缺陷</p>
-</li>
-<li>不知实际的高低，比如ma之上超高的位置open long，很容易引起巨大是loss</li>
-<li>可能是恰好当前一个ma之上，  实际上具体的大部分都是ma之下，可能恰好做反了</li>
-<li>一个K的反转里面out，几乎时刻都在open close，惨死</li>
-</ul>
-<h3>v3</h3>
+<table class="table">
+<thead>
+<tr>
+<th>优点</th>
+<th>缺陷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>要求连续几个都处于之上或之下，减少了偶然性</td>
+<td>不知实际的高低，比如ma之上超高的位置open long，很容易引起巨大是loss</td>
+</tr>
+<tr>
+<td></td>
+<td>可能是恰好当前一个ma之上，  实际上具体的大部分都是ma之下，可能恰好做反了</td>
+</tr>
+<tr>
+<td></td>
+<td>一个K的反转里面out，几乎时刻都在open close，惨死</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v3">v3</h3>
 <pre><code class="language-python">import talib
 
 from db.fkline import find_csv
@@ -248,7 +284,25 @@ class SingleMa(BaseStrategy):
 <p>如果出现单K反转超过1%，并且后续又继续延续trend，可能会白亏</p>
 </li>
 </ul>
-<h3>v4</h3>
+<table class="table">
+<thead>
+<tr>
+<th>优点</th>
+<th>缺陷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>win loss out都需要满足至少1%的振幅，这样可以避免无穷的open close</td>
+<td>不知实际的高低，比如ma之上超高的位置open long，很容易引起巨大是loss</td>
+</tr>
+<tr>
+<td></td>
+<td>如果出现单K反转超过1%，并且后续又继续延续trend，可能会白亏</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v4">v4</h3>
 <pre><code class="language-python">import talib
 
 from db.fkline import find_csv
@@ -332,7 +386,21 @@ class SingleMa(BaseStrategy):
 <li>如果出现单K反转超过1%，并且后续又继续延续trend，可能会白亏</li>
 </ul>
 <p>根据测试结果，bias_rate 如果不想限制太死，参考值为不宜小于3/1000</p>
-<h3>v5</h3>
+<table class="table">
+<thead>
+<tr>
+<th>优点</th>
+<th>缺陷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>引入bias进行偏移的限定，避免在bias值超大的时候还参与</td>
+<td>如果出现单K反转超过1%，并且后续又继续延续trend，可能会白亏</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v5">v5</h3>
 <p>接下来我们实装test观察</p>
 <p>2022-11-17 10:13</p>
 <p>ETHUSDT 开多,成交价格 1217.11</p>
@@ -622,16 +690,22 @@ class SingleMa(BaseStrategy):
 </code></pre>
 <p>还有问题吗？</p>
 <p>插针的超级急速运动没有解决</p>
-<ul>
-<li>改进：</li>
-<li>
-<p>如果超大损失，直接close，能避免再大的loss，虽然之前已经处理了loss_price，但是如果算出来的这个值距离很远，很可能就已经爆仓了，所以这一步有必要处理</p>
-</li>
-<li>
-<p>缺陷：</p>
-</li>
-<li>但如果插完之后里面回到原有水平就白亏，所以这是个两难的问题，</li>
-</ul>
+<table class="table">
+<thead>
+<tr>
+<th>改进</th>
+<th>缺陷</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>如果超大损失，直接close，能避免再大的loss，虽然之前已经处<br />理了loss_price，但是如果算出来的这个值距离很远，很可能就已经<br />爆仓了，所以这一步有必要处理</td>
+<td>但如果插完之后里面回到原有水平就白亏，所以这是个两难的问题</td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <p>【v5-y3】</p>
 <pre><code class="language-python">import talib
 from loguru import logger
@@ -737,7 +811,7 @@ class SingleMa(BaseStrategy):
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
         integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>

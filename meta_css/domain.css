@@ -2,12 +2,12 @@ h1 {
     text-align: center;
 }
 
-ul li {
-    list-style: none;
 
+.title_li_show ul li {
+    list-style: none;
 }
 
-ul {
+.title_li_show ul  {
     list-style: none;
 }
 
@@ -26,12 +26,13 @@ a {
 ul.title_li_show li {
     height: 30px;
     font-size: 18px;
-    /* background-color: pink; */
     text-align: center;
     font-weight: 400;
     margin-top: 10px;
+        list-style: none;
+
 }
 
 code {
-    background-color: rgb(246, 248, 250)!important;
+    background-color: rgb(246, 248, 250) !important;
 }
