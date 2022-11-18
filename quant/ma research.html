@@ -28,7 +28,7 @@
         <div>
             <div class="toc">
 <ul>
-<li><a href="#single-ma">single ma</a><ul>
+<li><a href="#_1">初步尝试</a><ul>
 <li><a href="#v1">v1</a></li>
 <li><a href="#v2">v2</a></li>
 <li><a href="#v3">v3</a></li>
@@ -36,6 +36,11 @@
 <li><a href="#v5">v5</a></li>
 </ul>
 </li>
+<li><a href="#_2">频率问题处理</a></li>
+<li><a href="#ma">双MA的引入</a></li>
+<li><a href="#_3">验证无效解决</a></li>
+<li><a href="#ema">EMA替换</a></li>
+<li><a href="#_4">回测</a></li>
 </ul>
 </div>
 <p>预计要完成的内容</p>
@@ -46,7 +51,7 @@
 <li>均线+裸K组合交易</li>
 <li>...</li>
 </ol>
-<h2 id="single-ma">single ma</h2>
+<h2 id="_1">初步尝试</h2>
 <h3 id="v1">v1</h3>
 <pre><code class="language-python">import talib
 
@@ -958,6 +963,711 @@ class SingleMa(BaseStrategy):
 </tr>
 </tbody>
 </table>
+<h2 id="_2">频率问题处理</h2>
+<p>经过研究发现即使是15m的运动幅度50k也很容易接近4%，所以我们的运行逻辑，如果1%这种波动就直接close，会造成极大的交易频率问题，当然放大了允许的亏损，更好的方式，应该是只保留的之前计算是loss_price，和插针保护即可，其它的应该移除。但是亏损可能接近4%，这样允许的杠杆就必须降低，简易不超过8，5x比较合适。</p>
+<p>【pro-1】</p>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        p = 20
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.SMA(df['c'], p)  # p 为MA的周期 比如20
+        df['bias'] = df['c'] - df['ma']  # bias 描述和ma的差值
+        df['bias_rate'] = df['bias'] / df['ma']  # 百分比可以得到一个偏移率
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        if sdf['bias_rate'].gt(0).all():
+            logger.info(k['bias_rate'])
+            if 0 &lt; k['bias_rate'] &lt; bias_closer:
+                # logger.info('may long')
+                self.open_long()
+                return
+        if sdf['bias_rate'].lt(0).all():
+            if 0 &gt; k['bias_rate'] &gt; -bias_closer:
+                self.open_short()
+                # logger.info('may short')
+                return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        logger.info(f&quot;loss {self.get_pure_win():.4f}&quot;)
+        logger.info(apm_rate)
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+</code></pre>
+<p>允许的亏损变大了，在这一步前更重要的就是入场的方向和价位需要更加谨慎了，否则就要承受较大的亏损，另外承担较大亏损的同时也得博取更大利润才行。</p>
+<h2 id="ma">双MA的引入</h2>
+<p>单个的缺点在于无法比较直观的感受的行进中的程度，刚开始还是要结束？</p>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from findex import ema
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        p = 20
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.SMA(df['c'], p)
+        df['ma2'] = talib.SMA(df['c'], 43)
+        df['bias'] = df['c'] - df['ma']
+        df['bias_rate'] = df['bias'] / df['ma']
+        df['bias2'] = df['c'] - df['ma']
+        df['bias2_rate'] = df['bias2'] / df['ma2']
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+        self.gp = ema.gold_pos_v2(df, 'ma', 'ma2')
+        self.dp = ema.dead_pos_v2(df, 'ma', 'ma2')
+        logger.info(f&quot;gp {self.gp} dp {self.dp}&quot;)
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        if sdf['bias_rate'].gt(0).all():
+            logger.info(k['bias_rate'])
+            if 0 &lt; k['bias_rate'] &lt; bias_closer:
+                # logger.info('may long')
+                self.open_long()
+                return
+        if sdf['bias_rate'].lt(0).all():
+            if 0 &gt; k['bias_rate'] &gt; -bias_closer:
+                self.open_short()
+                # logger.info('may short')
+                return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        logger.info(f&quot;loss {self.get_pure_win():.4f}&quot;)
+        logger.info(apm_rate)
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+        # if self.has_order:
+        #     if apm_rate &gt; 2 / 100:
+        #         self.reverse_break_close()
+        #         if self.has_order:
+        #             if self.is_now_long():
+        #                 if self.df[-7:]['bias_rate'].lt(0).all():
+        #                     self.close()
+        #                     return
+        #             if self.is_now_short():
+        #                 if self.df[-7:]['bias_rate'].gt(0).all():
+        #                     self.close()
+        #                     return
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+</code></pre>
+<p>引入了两个ma，且计算了交叉到现在经历的K数量，gp代表金叉，dp代表死叉，为正数才代表该方向成立，数字越大代表交叉得越久。</p>
+<p>借助它我们可以用来衡量参与的时机，比如我们限定只在早期才参与，否则不参与</p>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from findex import ema
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        p = 20
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.SMA(df['c'], p)
+        df['ma2'] = talib.SMA(df['c'], 43)
+        df['bias'] = df['c'] - df['ma']
+        df['bias_rate'] = df['bias'] / df['ma']
+        df['bias2'] = df['c'] - df['ma']
+        df['bias2_rate'] = df['bias2'] / df['ma2']
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+        self.gp = ema.gold_pos_v2(df, 'ma', 'ma2')
+        self.dp = ema.dead_pos_v2(df, 'ma', 'ma2')
+        logger.info(f&quot;gp {self.gp} dp {self.dp}&quot;)
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        max_use = 30
+        if 0 &lt; self.gp &lt; max_use:
+            if sdf['bias_rate'].gt(0).all():
+                logger.info(k['bias_rate'])
+                if 0 &lt; k['bias_rate'] &lt; bias_closer:
+                    self.open_long()
+                    return
+        if 0 &lt; self.dp &lt; max_use:
+            if sdf['bias_rate'].lt(0).all():
+                if 0 &gt; k['bias_rate'] &gt; -bias_closer:
+                    self.open_short()
+                    return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        logger.info(f&quot;loss {self.get_pure_win():.4f}&quot;)
+        logger.info(apm_rate)
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+        # if self.has_order:
+        #     if apm_rate &gt; 2 / 100:
+        #         self.reverse_break_close()
+        #         if self.has_order:
+        #             if self.is_now_long():
+        #                 if self.df[-7:]['bias_rate'].lt(0).all():
+        #                     self.close()
+        #                     return
+        #             if self.is_now_short():
+        #                 if self.df[-7:]['bias_rate'].gt(0).all():
+        #                     self.close()
+        #                     return
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+</code></pre>
+<table class="table">
+<thead>
+<tr>
+<th>问题</th>
+<th>是否解决</th>
+<th>解决办法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向</td>
+<td>是</td>
+<td>连续的ma的单边性</td>
+</tr>
+<tr>
+<td>入场价格</td>
+<td>是</td>
+<td>bias接近率</td>
+</tr>
+<tr>
+<td>止损</td>
+<td>是</td>
+<td>计算止损、最大止损、反向连续突破性止损</td>
+</tr>
+<tr>
+<td>止盈</td>
+<td>是</td>
+<td>最大止盈、bias偏移过大止盈、较长利润之后的连续反向突破止盈</td>
+</tr>
+<tr>
+<td>频率问题</td>
+<td>-</td>
+<td>双MA的交叉早期限定一定程度解决了这个问题</td>
+</tr>
+<tr>
+<td>震荡性反复亏损</td>
+<td>-</td>
+<td>放大了止损，一定程序解决了这个问题</td>
+</tr>
+<tr>
+<td>恶意插针</td>
+<td>否</td>
+<td>这个问题无法预测，无好的解决办法</td>
+</tr>
+<tr>
+<td>验证无效</td>
+<td>否</td>
+<td>交叉后以bias值限定了入场价格，但是也可能直接破掉</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">验证无效解决</h2>
+<p>我们希望验证是有效的，这个怎么作为标准呢，我们假设open long为研究对象</p>
+<ol>
+<li>最近的k有靠近ma</li>
+<li>不能下破ma2</li>
+<li>最近的语义描述为10K</li>
+<li>最新的5k和前5k比high high</li>
+</ol>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from findex import ema
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        p = 20
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.SMA(df['c'], p)
+        df['ma2'] = talib.SMA(df['c'], 43)
+        df['bias'] = df['c'] - df['ma']
+        df['bias_rate'] = df['bias'] / df['ma']
+        df['bias2'] = df['c'] - df['ma']
+        df['bias2_rate'] = df['bias2'] / df['ma2']
+        df['ma_gap'] = df['ma'] - df['ma2']
+        df['ma_gap_rate'] = df['ma_gap'] / df['ma']
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+        self.gp = ema.gold_pos_v2(df, 'ma', 'ma2')
+        self.dp = ema.dead_pos_v2(df, 'ma', 'ma2')
+        logger.info(f&quot;gp {self.gp} dp {self.dp}&quot;)
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        max_use = 80
+        df10 = df[-10:]
+
+        if 0 &lt; self.gp &lt; max_use:
+            if len(df10[-10:-5].query('bias_rate &lt; 2/1000')) &gt; 0:
+                if df10[-5:]['h'].max() &gt; df10[-10:-5]['h'].max():
+                    if len(df10.query('bias2_rate &lt; 0')) &lt;= 1:
+                        if sdf['bias_rate'].gt(0).all():
+                            logger.info(k['bias_rate'])
+                            if 0 &lt; k['bias_rate'] &lt; bias_closer * 2:
+                                self.open_long()
+                                return
+        if 0 &lt; self.dp &lt; max_use:
+            if len(df10[-10:-5].query('bias_rate &gt; -2/1000')) &gt; 0:
+                if df10[-5:]['l'].min() &gt; df10[-10:-5]['l'].min():
+                    if sdf['bias_rate'].lt(0).all():
+                        if 0 &gt; k['bias_rate'] &gt; -bias_closer * 2:
+                            self.open_short()
+                            return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        # logger.info(f&quot;loss {self.get_pure_win():.4f}&quot;)
+        # logger.info(apm_rate)
+        logger.info(k['ma_gap'])
+        logger.info(k['ma_gap_rate'])
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+
+</code></pre>
+<p>最终允许开单的一行bias_rate限制放大两倍是原因是，当验证过后，可能次数的bias_rate会比较大，如果不放大可能无法open。</p>
+<table class="table">
+<thead>
+<tr>
+<th>问题</th>
+<th>是否解决</th>
+<th>解决办法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向</td>
+<td>是</td>
+<td>连续的ma的单边性</td>
+</tr>
+<tr>
+<td>入场价格</td>
+<td>是</td>
+<td>bias接近率</td>
+</tr>
+<tr>
+<td>止损</td>
+<td>是</td>
+<td>计算止损、最大止损、反向连续突破性止损</td>
+</tr>
+<tr>
+<td>止盈</td>
+<td>是</td>
+<td>最大止盈、bias偏移过大止盈、较长利润之后的连续反向突破止盈</td>
+</tr>
+<tr>
+<td>频率问题</td>
+<td>60%</td>
+<td>验证技术可以优化</td>
+</tr>
+<tr>
+<td>震荡性反复亏损</td>
+<td>60%</td>
+<td>验证技术可以优化</td>
+</tr>
+<tr>
+<td>恶意插针</td>
+<td>否</td>
+<td>这个问题无法预测，无好的解决办法</td>
+</tr>
+<tr>
+<td>验证无效</td>
+<td>是</td>
+<td>以最新的10进行裸K判定以及双bias的破坏保护</td>
+</tr>
+</tbody>
+</table>
+<p>我们通过验证的有效性可以规避较大的入场风险，当然需要付出的代价是相对保守的入场价格</p>
+<h2 id="ema">EMA替换</h2>
+<p>ma没那么平滑，我们可以考虑用它替换</p>
+<pre><code class="language-python">import talib
+from loguru import logger
+
+from db.fkline import find_csv
+from findex import ema
+from strategy.BaseStrategy import BaseStrategy
+
+
+class SingleMa(BaseStrategy):
+
+    def __init__(self, _id, uid, s, margin, sid, mode, ext):
+        super().__init__(_id, uid, s, margin, sid, mode, ext)
+        # 暂时写死
+        i = '15m'
+        self.i = i  # 为k周期比如4h
+        df = find_csv(s, i)
+        df['ma'] = talib.EMA(df['c'], 34)
+        df['ma2'] = talib.EMA(df['c'], 73)
+        df['bias'] = df['c'] - df['ma']
+        df['bias_rate'] = df['bias'] / df['ma']
+        df['bias2'] = df['c'] - df['ma']
+        df['bias2_rate'] = df['bias2'] / df['ma2']
+        df['ma_gap'] = df['ma'] - df['ma2']
+        df['ma_gap_rate'] = df['ma_gap'] / df['ma']
+        self.df = df
+        k = self.df.iloc[-1]
+        self.k = k
+        self.gp = ema.gold_pos_v2(df, 'ma', 'ma2')
+        self.dp = ema.dead_pos_v2(df, 'ma', 'ma2')
+        logger.info(f&quot;gp {self.gp} dp {self.dp}&quot;)
+
+    def handle_in(self):
+        k = self.k
+        df = self.df
+        sdf = df[-5:]
+        bias_closer = 2 / 1000
+        max_use = 80
+        df10 = df[-10:]
+
+        if 0 &lt; self.gp &lt; max_use:
+            if len(df10[-10:-5].query('bias_rate &lt; 2/1000')) &gt; 0:
+                if df10[-5:]['h'].max() &gt; df10[-10:-5]['h'].max():
+                    if len(df10.query('bias2_rate &lt; 0')) &lt;= 1:
+                        if sdf['bias_rate'].gt(0).all():
+                            logger.info(k['bias_rate'])
+                            if 0 &lt; k['bias_rate'] &lt; bias_closer * 2:
+                                self.open_long()
+                                return
+        if 0 &lt; self.dp &lt; max_use:
+            if len(df10[-10:-5].query('bias_rate &gt; -2/1000')) &gt; 0:
+                if df10[-5:]['l'].min() &gt; df10[-10:-5]['l'].min():
+                    if sdf['bias_rate'].lt(0).all():
+                        if 0 &gt; k['bias_rate'] &gt; -bias_closer * 2:
+                            self.open_short()
+                            return
+
+    def handle_win_out(self):
+        k = self.k
+        super().handle_win_out()
+        logger.info(f&quot;win {self.get_unrealize_profit()}&quot;)
+        if self.has_order:
+            super().handle_loss_out()
+            apm = abs(self.get_price_move())
+            apm_rate = apm / k['c']
+            if apm_rate &gt; 3 / 100:
+                self.close()
+                return
+            if abs(k['bias_rate']) &gt; 1 / 100:
+                self.close()
+                return
+            if self.has_order:
+                if apm_rate &gt; 1 / 100:
+                    self.reverse_break_close()
+
+    def handle_loss_out(self):
+        k = self.k
+        c = k['c']
+        apm = abs(self.get_price_move())
+        apm_rate = apm / k['c']
+        lp_key = self.create_key('loss_price')
+        # logger.info(f&quot;loss {self.get_pure_win():.4f}&quot;)
+        # logger.info(apm_rate)
+        logger.info(k['ma_gap'])
+        logger.info(k['ma_gap_rate'])
+        super().handle_loss_out()
+        if self.get_unrealize_profit_rate() &lt; -60 / 100:
+            self.close()
+            return
+
+        if not self.have_key(lp_key):
+            if self.is_now_long():
+                self.save_loss_price(self.df[-20:]['l'].min() - c / 100)
+            if self.is_now_short():
+                self.save_loss_price(self.df[-20:]['h'].max() + c / 100)
+
+    def reverse_break_close(self):
+        k = self.k
+        if self.is_now_long():
+            if k['c'] &lt; 0:
+                self.close()
+                return
+        if self.is_now_short():
+            if k['c'] &gt; 0:
+                self.close()
+                return
+</code></pre>
+<h2 id="_4">回测</h2>
+<table class="table">
+<thead>
+<tr>
+<th>问题</th>
+<th>是否解决</th>
+<th>解决办法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向</td>
+<td>是</td>
+<td>连续的ma的单边性</td>
+</tr>
+<tr>
+<td>入场价格</td>
+<td>是</td>
+<td>bias接近率</td>
+</tr>
+<tr>
+<td>止损</td>
+<td>是</td>
+<td>计算止损、最大止损、反向连续突破性止损</td>
+</tr>
+<tr>
+<td>止盈</td>
+<td>是</td>
+<td>最大止盈、bias偏移过大止盈、较长利润之后的连续反向突破止盈</td>
+</tr>
+<tr>
+<td>频率问题</td>
+<td>60%</td>
+<td>验证技术可以优化</td>
+</tr>
+<tr>
+<td>震荡性反复亏损</td>
+<td>60%</td>
+<td>验证技术可以优化</td>
+</tr>
+<tr>
+<td>恶意插针</td>
+<td>否</td>
+<td>这个问题无法预测，无好的解决办法</td>
+</tr>
+<tr>
+<td>验证无效</td>
+<td>是</td>
+<td>以最新的10进行裸K判定以及双bias的破坏保护</td>
+</tr>
+<tr>
+<td>回踩后暴跌</td>
+<td>否</td>
+<td>gap优化</td>
+</tr>
+</tbody>
+</table>
+<p>时效性交易： 2022-11-17 17:48 ~| 2022-11-17 23:48
+币对          ethusdtt
+入场价     1231
+方向      空
+止盈价格    1123
+止损价格    1276
+建议杠杆    6</p>
 
         </div>
     </div>

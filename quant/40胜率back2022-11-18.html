@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+
+    <title>40胜率back2022-11-18</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>40胜率back2022-11-18</h1>
+        </div>
+        <div>
+            <h2 id="v1">v1</h2>
+<p>test for eth 4h</p>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+import talib
+
+from daotest.BaseTest import BaseTest
+from findex import nake, ema, macd
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+# -5/10 now balance 10308.02 total times 66 total fee 196.50    total balance 3000  margin 1000
+# -4/10 now balance 10408.02 total times 66 total fee 196.50    total balance 3000  margin 1000   win times  19 loss times 46
+max_loss_v = -4 / 10
+
+
+class B3(BaseTest):
+
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 100:
+            return
+        k = self.now_k
+        df = self.df
+        p2 = df[-40:-20]
+        p1 = df[-20:]
+        p2min = p2['l'].min()
+        p1min = p1['l'].min()
+        p2max = p2['h'].max()
+        p1max = p1['h'].max()
+        c = k['c']
+        o = k['o']
+
+        sec = df.iloc[-2]
+        three = df.iloc[-3]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        limit = 2.7 / 100
+        max_use = 2370
+        min_bias_rate = abs(nake.min_dif(sec['ma'], sec['h'], sec['l'])) / sec['ma']
+
+        macd_gp = macd.gold_pos(df_pre)
+        macd_dp = macd.dead_pos(df_pre)
+        if 0 &lt; gp &lt; max_use:
+            if min_bias_rate &lt; limit and macd_gp &gt; 0 and sec['macd'] &gt; 0:
+                # sub = df_pre[-(gp-1):]
+                # if len(sub) &gt; 3:
+                #     if len(sub.query('bias2_rate &lt; 0')) &gt; 0:
+                #         return
+                # if min_bias_rate &lt; limit and sec['yy'] and sec['l'] &gt; three['l'] \
+                #         and sec['h'] &gt; three['h']:
+                # if p1min &gt; p2min:
+                #     return
+                self.buy_long(k['o'])
+                return
+        if 0 &lt; dp &lt; max_use:
+            # sub = df_pre[-(dp - 1):]
+            # if len(sub) &gt; 3:
+            #     if len(sub.query('bias2_rate &gt; 0')) &gt; 0:
+            #         return
+            if min_bias_rate &lt; limit and macd_dp &gt; 0 and sec['macd'] &lt; 0:
+                # if min_bias_rate &lt; limit and not sec['yy'] and sec['h'] &lt; three['h'] \
+                #             and sec['l'] &lt; three['l']:
+                # if p1max &lt; p2max:
+                #     return
+                self.buy_short(k['o'])
+                return
+
+    def handle_win(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df[:-1]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        p3 = df[-5:-1]
+
+        max_win = 200 / 100
+
+        if self.open_win() &gt; 30 / 100:
+            if self.stop_price is None:
+                if self.is_long():
+                    self.stop_price = o - o * 5 / 100
+                if self.is_short():
+                    self.stop_price = o + o * 5 / 100
+
+        if self.stop_price is not None:
+            if self.is_long():
+                if o &lt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+            if self.is_short():
+                if o &gt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max_win')
+            return
+        if self.is_long():
+            if dp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+        if self.is_short():
+            if gp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+    def handle_loss(self):
+        k = self.now_k
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        # loss = -4 / 10
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+            return
+
+        if self.open_win() &lt; -1.5/10:
+            if self.is_long():
+                if dp &gt; 0:
+                    self.close(k['o'], 'ma decross')
+                    return
+            if self.is_short():
+                if gp &gt; 0:
+                    self.close(k['o'], 'ma decross')
+                    return
+
+    def handle_mid(self):
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+path_dir = 'E:\\coding\\coin_data\\eth\\4h'
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                df = pd.read_csv(fp, low_memory=False)
+                cs = df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                df = df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(df['t'])
+                df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                df['ts'] = df['t'] + h8
+                df['date'] = pd.to_datetime(df['ts'], unit='ms')
+                df_total = pd.concat([df_total, df])
+
+print(len(df_total))
+df = df_total
+print(df.iloc[0]['date'])
+df = df.sort_values('t', ascending=True)
+dt = pd.to_numeric(df['t'])
+df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+df['t'] = df['t'] + h8
+df['date'] = pd.to_datetime(df['t'], unit='ms')
+df = nake.nake_convert(df)
+df['ma'] = talib.EMA(df['c'], 34)
+df['ma2'] = talib.EMA(df['c'], 73)
+df['bias'] = df['c'] - df['ma']
+df['bias2'] = df['c'] - df['ma2']
+df['l_bias2'] = df['l'] - df['ma2']
+df['h_bias2'] = df['h'] - df['ma2']
+df['bias_rate'] = df['bias'] / df['ma']
+df['bias2_rate'] = df['bias2'] / df['ma2']
+df = macd.cal_macd(df)
+all = 3000
+margin = 1000
+fix_win = 130 / 100
+fix_loss = -80 / 100
+
+bt = B3(df[100:], all, margin, 3, 5 / 10000)
+bt.run()
+print(
+    f&quot;balance: {bt.balance:.2f} times {bt.entry_times} fee {bt.total_commission:.2f} &quot;
+    f&quot;total balance {all}  margin {margin} win times  {bt.win_times} loss times {bt.loss_times}  &quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+
+</code></pre>
+<p>eth 4h test</p>
+<blockquote>
+<p>balance: 12165.09 times 73 fee 217.50 total balance 3000  margin 1000 win times  34 loss times 38  </p>
+</blockquote>
+<p>btc 4h test</p>
+<blockquote>
+<p>balance: 4678.92 times 68 fee 202.50 total balance 3000  margin 1000 win times  30 loss times 37  </p>
+</blockquote>
+<p>bnb 4h test</p>
+<blockquote>
+<p>balance: 6242.63 times 64 fee 190.50 total balance 3000  margin 1000 win times  33 loss times 30 </p>
+</blockquote>
+<p>ada 4h test</p>
+<blockquote>
+<p>balance: 10744.30 times 81 fee 243.00 total balance 3000  margin 1000 win times  37 loss times 44  </p>
+</blockquote>
+<p>dot 4h test</p>
+<blockquote>
+<p>balance: 7409.15 times 65 fee 193.50 total balance 3000  margin 1000 win times  31 loss times 33  </p>
+</blockquote>
+<p>ltc 4h test</p>
+<blockquote>
+<p>balance: 999.99 times 74 fee 222.00 total balance 3000  margin 1000 win times  33 loss times 41  </p>
+</blockquote>
+<p>主要处理获利后停损，不能倒亏，还有必须有一定loss才执行decross close</p>
+<h2 id="v2">v2</h2>
+<p>如果选择移除基础loss才decross close，看看如何</p>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+import talib
+
+from daotest.BaseTest import BaseTest
+from findex import nake, ema, macd
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+# -5/10 now balance 10308.02 total times 66 total fee 196.50    total balance 3000  margin 1000
+# -4/10 now balance 10408.02 total times 66 total fee 196.50    total balance 3000  margin 1000   win times  19 loss times 46
+max_loss_v = -4 / 10
+
+
+class B3(BaseTest):
+
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 100:
+            return
+        k = self.now_k
+        df = self.df
+        p2 = df[-40:-20]
+        p1 = df[-20:]
+        p2min = p2['l'].min()
+        p1min = p1['l'].min()
+        p2max = p2['h'].max()
+        p1max = p1['h'].max()
+        c = k['c']
+        o = k['o']
+
+        sec = df.iloc[-2]
+        three = df.iloc[-3]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        limit = 2.7 / 100
+        max_use = 2370
+        min_bias_rate = abs(nake.min_dif(sec['ma'], sec['h'], sec['l'])) / sec['ma']
+
+        macd_gp = macd.gold_pos(df_pre)
+        macd_dp = macd.dead_pos(df_pre)
+        if 0 &lt; gp &lt; max_use:
+            if min_bias_rate &lt; limit and macd_gp &gt; 0 and sec['macd'] &gt; 0:
+                # sub = df_pre[-(gp-1):]
+                # if len(sub) &gt; 3:
+                #     if len(sub.query('bias2_rate &lt; 0')) &gt; 0:
+                #         return
+                # if min_bias_rate &lt; limit and sec['yy'] and sec['l'] &gt; three['l'] \
+                #         and sec['h'] &gt; three['h']:
+                # if p1min &gt; p2min:
+                #     return
+                self.buy_long(k['o'])
+                return
+        if 0 &lt; dp &lt; max_use:
+            # sub = df_pre[-(dp - 1):]
+            # if len(sub) &gt; 3:
+            #     if len(sub.query('bias2_rate &gt; 0')) &gt; 0:
+            #         return
+            if min_bias_rate &lt; limit and macd_dp &gt; 0 and sec['macd'] &lt; 0:
+                # if min_bias_rate &lt; limit and not sec['yy'] and sec['h'] &lt; three['h'] \
+                #             and sec['l'] &lt; three['l']:
+                # if p1max &lt; p2max:
+                #     return
+                self.buy_short(k['o'])
+                return
+
+    def handle_win(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df[:-1]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        p3 = df[-5:-1]
+
+        max_win = 200 / 100
+
+        if self.open_win() &gt; 30 / 100:
+            if self.stop_price is None:
+                if self.is_long():
+                    self.stop_price = o - o * 5 / 100
+                if self.is_short():
+                    self.stop_price = o + o * 5 / 100
+
+        if self.stop_price is not None:
+            if self.is_long():
+                if o &lt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+            if self.is_short():
+                if o &gt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max_win')
+            return
+        if self.is_long():
+            if dp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+        if self.is_short():
+            if gp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+    def handle_loss(self):
+        k = self.now_k
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        # loss = -4 / 10
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+            return
+
+        if self.is_long():
+            if dp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+        if self.is_short():
+            if gp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+    def handle_mid(self):
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+path_dir = 'E:\\coding\\coin_data\\ltc\\4h'
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                df = pd.read_csv(fp, low_memory=False)
+                cs = df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                df = df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(df['t'])
+                df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                df['ts'] = df['t'] + h8
+                df['date'] = pd.to_datetime(df['ts'], unit='ms')
+                df_total = pd.concat([df_total, df])
+
+print(len(df_total))
+df = df_total
+print(df.iloc[0]['date'])
+df = df.sort_values('t', ascending=True)
+dt = pd.to_numeric(df['t'])
+df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+df['t'] = df['t'] + h8
+df['date'] = pd.to_datetime(df['t'], unit='ms')
+df = nake.nake_convert(df)
+df['ma'] = talib.EMA(df['c'], 34)
+df['ma2'] = talib.EMA(df['c'], 73)
+df['bias'] = df['c'] - df['ma']
+df['bias2'] = df['c'] - df['ma2']
+df['l_bias2'] = df['l'] - df['ma2']
+df['h_bias2'] = df['h'] - df['ma2']
+df['bias_rate'] = df['bias'] / df['ma']
+df['bias2_rate'] = df['bias2'] / df['ma2']
+df = macd.cal_macd(df)
+all = 3000
+margin = 1000
+fix_win = 130 / 100
+fix_loss = -80 / 100
+
+bt = B3(df[100:], all, margin, 3, 5 / 10000)
+bt.run()
+print(
+    f&quot;balance: {bt.balance:.2f} times {bt.entry_times} fee {bt.total_commission:.2f} &quot;
+    f&quot;total balance {all}  margin {margin} win times  {bt.win_times} loss times {bt.loss_times}  &quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+</code></pre>
+<p>btc 4h</p>
+<blockquote>
+<p>balance: 5940.40 times 111 fee 331.50 total balance 3000  margin 1000 win times  27 loss times 83  </p>
+</blockquote>
+<p>eth 4h</p>
+<blockquote>
+<p>balance: 10752.36 times 107 fee 319.50 total balance 3000  margin 1000 win times  36 loss times 70  </p>
+</blockquote>
+<p>bnb 4h</p>
+<blockquote>
+<p>balance: 8081.23 times 87 fee 259.50 total balance 3000  margin 1000 win times  34 loss times 52  </p>
+</blockquote>
+<p>ada 4h</p>
+<blockquote>
+<p>balance: 12813.68 times 108 fee 324.00 total balance 3000  margin 1000 win times  38 loss times 70  </p>
+</blockquote>
+<p>dot 4h</p>
+<blockquote>
+<p>balance: 8026.73 times 92 fee 274.50 total balance 3000  margin 1000 win times  31 loss times 60  </p>
+</blockquote>
+<p>ltc 4h </p>
+<blockquote>
+<p>balance: 4706.84 times 117 fee 349.50 total balance 3000  margin 1000 win times  39 loss times 77  </p>
+</blockquote>
+<h2 id="v3">v3</h2>
+<p>作为一个备份版本</p>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+import talib
+
+from daotest.BaseTest import BaseTest
+from findex import nake, ema, macd
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+# -5/10 now balance 10308.02 total times 66 total fee 196.50    total balance 3000  margin 1000
+# -4/10 now balance 10408.02 total times 66 total fee 196.50    total balance 3000  margin 1000   win times  19 loss times 46
+
+
+max_loss_v = -4 / 10
+kk = 20
+loss73 = -2/100
+max_win = 1.5
+
+class B3(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 100:
+            return
+        k = self.now_k
+        df = self.df
+        p2 = df[-40:-20]
+        p1 = df[-20:]
+        sec = df.iloc[-2]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        limit = 2.7 / 100
+        max_use = 2370
+        min_bias_rate = abs(nake.min_dif(sec['ma'], sec['h'], sec['l'])) / sec['ma']
+
+        macd_gp = macd.gold_pos(df_pre)
+        macd_dp = macd.dead_pos(df_pre)
+        if 0 &lt; gp &lt; max_use:
+            if min_bias_rate &lt; limit and macd_gp &gt; 0 and sec['macd'] &gt; 0:
+                self.buy_long(k['o'])
+                return
+        if 0 &lt; dp &lt; max_use:
+            if min_bias_rate &lt; limit and macd_dp &gt; 0 and sec['macd'] &lt; 0:
+                self.buy_short(k['o'])
+                return
+
+    def handle_win(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df[:-1]
+        df_pre = df[:-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        p3 = df[-5:-1]
+
+        sec = df_pre.iloc[-1]
+
+        if self.open_win() &gt; 12 / 100:
+            if self.stop_price is None:
+                if self.is_long():
+                    self.stop_price = o - o * 3 / 100
+                if self.is_short():
+                    self.stop_price = o + o * 3 / 100
+
+        if self.stop_price is not None:
+            if self.is_long():
+                if o &lt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+            if self.is_short():
+                if o &gt; self.stop_price:
+                    self.close(o, '停损')
+                    return
+
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max_win')
+            return
+        if self.is_long():
+            if dp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+        if self.is_short():
+            if gp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+    def handle_loss(self):
+        k = self.now_k
+        o = k['o']
+        df_pre = df[:-1]
+        sec = df.iloc[-1]
+        gp = ema.gold_pos_v2(df_pre, 'ma', 'ma2')
+        dp = ema.dead_pos_v2(df_pre, 'ma', 'ma2')
+        # loss = -4 / 10
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+            return
+
+        if self.is_long():
+
+            if self.buy_k &lt; kk:
+                if sec['bias2_rate'] &lt; loss73:
+                    self.close(o, '73击破损失')
+                    return
+            if dp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+        if self.is_short():
+            if self.buy_k &lt; kk:
+                if sec['bias2_rate'] &gt; -loss73:
+                    self.close(o, '73击破损失')
+                    return
+            if gp &gt; 0:
+                self.close(k['o'], 'ma decross')
+                return
+
+    def handle_mid(self):
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, 'max loss')
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+path_dir = 'E:\\coding\\coin_data\\eth\\4h'
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                df = pd.read_csv(fp, low_memory=False)
+                cs = df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                     names=['t', 'o', 'h', 'l', 'c', 'v'])
+                df = df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(df['t'])
+                df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                df['ts'] = df['t'] + h8
+                df['date'] = pd.to_datetime(df['ts'], unit='ms')
+                df_total = pd.concat([df_total, df])
+
+df = df_total
+# df = df[4500:]
+# df = df[4500:]
+print(df.iloc[0]['date'])
+df = df.sort_values('t', ascending=True)
+dt = pd.to_numeric(df['t'])
+df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+df['t'] = df['t'] + h8
+df['date'] = pd.to_datetime(df['t'], unit='ms')
+df = nake.nake_convert(df)
+df['ma'] = talib.EMA(df['c'], 34)
+df['ma2'] = talib.EMA(df['c'], 73)
+df['bias'] = df['c'] - df['ma']
+df['bias2'] = df['c'] - df['ma2']
+df['l_bias2'] = df['l'] - df['ma2']
+df['h_bias2'] = df['h'] - df['ma2']
+df['bias_rate'] = df['bias'] / df['ma']
+df['bias2_rate'] = df['bias2'] / df['ma2']
+df = macd.cal_macd(df)
+all = 3000
+margin = 1000
+fix_win = 130 / 100
+fix_loss = -80 / 100
+
+bt = B3(df[100:], all, margin, 3, 5 / 10000)
+bt.run()
+print(
+    f&quot;balance: {bt.balance:.2f} times {bt.entry_times} fee {bt.total_commission:.2f} &quot;
+    f&quot;total balance {all}  margin {margin} win times  {bt.win_times} loss times {bt.loss_times}  &quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+
+</code></pre>
+
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>
