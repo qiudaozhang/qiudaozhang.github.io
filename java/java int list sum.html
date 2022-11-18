@@ -34,7 +34,6 @@
 List&lt;Integer&gt; list = data.stream().flatMap(List::stream).toList();
 Integer reduce = list.parallelStream().reduce(0, Integer::sum);
 </code></pre>
-
         </div>
     </div>
 </div>

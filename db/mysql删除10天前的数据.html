@@ -42,7 +42,6 @@
 <p>现在我们依据时间删除就可以搞了</p>
 <pre><code class="language-sql">DELETE FROM future_kline WHERE i = '1m' AND t &lt;= SELECT UNIX_TIMESTAMP(DATE_ADD(NOW(),INTERVAL -10 DAY)) * 1000
 </code></pre>
-
         </div>
     </div>
 </div>
