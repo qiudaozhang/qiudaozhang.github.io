@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+
+    <title>yin yang choose</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>yin yang choose</h1>
+        </div>
+        <div>
+            <h1 id="v1">v1</h1>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -2.4 / 10
+kk = 20
+max_win = 4 / 10
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sec = df.iloc[-2]
+        sdf = pre
+        if len(sdf) &gt; 100:
+            sdf = pre[-100:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+        p100_max_wave = nake.max_wave(sdf)
+        # print(len_yin)
+        # print(len_yang)
+        if len_yang &gt; len_yin and len_yin &gt; 15:
+            # if abs(o-hh)/hh &lt; p100_max_wave/5:
+            #     return
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        # if self.is_long():
+        #     if self.open_win() &gt; 10/100:
+        #         if sec['mid'] &lt; pre.iloc[-3]['mid']:
+        #             self.close(o,'mid lower')
+        #             return
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        sec = pre.iloc[-1]
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+
+        if self.max_loss_v2(df_pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+
+</code></pre>
+<p>money 10000 , profit: 29718 times 304 fee 3642  single  3000  win times 131  loss times 172 win rate 43.09% pure win 157200 pure loss -123840 leverage: 4 max win  0.4  max loss -0.24</p>
+<p>{'entry_price': 327.67, 'side': 'LONG', 'profit': 0, 'buy_time': Timestamp('2022-10-31 18:00:00'), 'stop_price': -1}</p>
+<p># v2</p>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -2.4 / 10
+kk = 20
+max_win = 6 / 10
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        # if len(self.df) &lt; 200:
+        #     return
+        super().next()
+
+
+
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sdf = pre[-50:]
+        p100_max_wave = nake.max_wave(sdf)
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+
+        # print(len_yin)
+        # print(len_yang)
+        if len_yang &gt; len_yin and yang_sum &gt; yin_sum and yang_sum/yin_sum &gt; 1.2:
+            # if abs(o-hh)/hh &lt; p100_max_wave/7:
+            #     return
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        if len_yin - len_yang &gt; 0:
+            self.close(o)
+            return
+
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        sec = pre.iloc[-1]
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+
+        if self.max_loss_v2(df_pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+</code></pre>
+<h1 id="v3">v3</h1>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -3/ 10
+kk = 20
+max_win = 1.2
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        # if len(self.df) &lt; 200:
+        #     return
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sdf = pre[-50:]
+        p100_max_wave = nake.max_wave(sdf)
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+
+        # print(len_yin)
+        # print(len_yang)
+        if len_yang &gt; len_yin and yang_sum &gt; yin_sum and yang_sum / yin_sum &gt; 1.2:
+                # and sdf[-15:]['l'].min() &gt; sdf[-50:-15]['l'].min():
+            # if abs(o-hh)/hh &lt; p100_max_wave/7:
+            #     return
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        if len_yin - len_yang &gt; 0:
+            self.close(o)
+            return
+        # if yang_sum &lt; yin_sum:
+        #     self.close(o)
+        #     return
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        df = self.df
+        o = k['o']
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+        # if len_yin - len_yang &gt; 0:
+        #     self.close(o)
+        #     return
+        if self.max_loss_v2(pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+</code></pre>
+<pre><code>money 10000 , profit: 30998 times 190 fee 2280  single  3000  win times 118  loss times 72 win rate 62.11% pure win 98078 pure loss -64800 leverage: 4 max win  1.2  max loss -0.30
+
+</code></pre>
+<h1 id="v4">v4</h1>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -4/ 10
+kk = 20
+max_win = 1.2
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        # if len(self.df) &lt; 200:
+        #     return
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sdf = pre[-50:]
+        p100_max_wave = nake.max_wave(sdf)
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+
+        # print(len_yin)
+        # print(len_yang)
+        if len_yang &gt; len_yin and yang_sum &gt; yin_sum and yang_sum / yin_sum &gt; 1.2:
+                # and sdf[-15:]['l'].min() &gt; sdf[-50:-15]['l'].min():
+            # if abs(o-hh)/hh &lt; p100_max_wave/7:
+            #     return
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        if len_yin - len_yang &gt; 5:
+            self.close(o)
+            return
+        # if yang_sum &lt; yin_sum:
+        #     self.close(o)
+        #     return
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        df = self.df
+        o = k['o']
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+        # if len_yin - len_yang &gt; 0:
+        #     self.close(o)
+        #     return
+        if self.max_loss_v2(pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+
+</code></pre>
+<blockquote>
+<p>money 10000 , profit: 42222 times 115 fee 1380  single  3000  win times 68  loss times 47 win rate 59.13% pure win 100002 pure loss -56400 leverage: 4 max win  1.2  max loss -0.40</p>
+</blockquote>
+<h1 id="v5">v5</h1>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -3/ 10
+kk = 20
+max_win = 1.5
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        # if len(self.df) &lt; 200:
+        #     return
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sdf = pre[-50:]
+        p100_max_wave = nake.max_wave(sdf)
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+
+        # print(len_yin)
+        # print(len_yang)
+        if len_yang &gt; len_yin and yang_sum &gt; yin_sum and yang_sum / yin_sum &gt; 1.2:
+                # and sdf[-15:]['l'].min() &gt; sdf[-50:-15]['l'].min():
+            # if abs(o-hh)/hh &lt; p100_max_wave/7:
+            #     return
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        if len_yin - len_yang &gt; 5:
+            self.close(o)
+            return
+        # if yang_sum &lt; yin_sum:
+        #     self.close(o)
+        #     return
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        df = self.df
+        o = k['o']
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+        # if len_yin - len_yang &gt; 0:
+        #     self.close(o)
+        #     return
+        if self.max_loss_v2(pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        df_pre = df[:-1]
+        df = self.df
+        pre = df[:-1]
+        # 卡中间的不处理
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+</code></pre>
+<blockquote>
+<p>money 10000 , profit: 47302 times 117 fee 1404  single  3000  win times 63  loss times 54 win rate 53.85% pure win 97306 pure loss -48600 leverage: 4 max win  1.5  max loss -0.30</p>
+</blockquote>
+<h1 id="v6">v6</h1>
+<pre><code class="language-python">import os
+import sys
+
+import pandas as pd
+
+from daotest.BaseTest import BaseTest
+from findex import nake
+
+pd.set_option('display.max_columns', 5000000)
+# 显示所有行
+pd.set_option('display.max_rows', 5000000)
+# 加长宽度
+pd.set_option('display.width', 500000)
+
+LONG = 'LONG'
+SHORT = 'SHORT'
+
+max_loss_v = -3/ 10
+kk = 20
+max_win = 1.5
+
+
+class ProTwo(BaseTest):
+    def __init__(self, data, balance, margin, leverage, commission):
+        super().__init__(data, balance, margin, leverage, commission)
+
+    def close_try(self):
+        pass
+
+    def next(self):
+        # if len(self.df) &lt; 200:
+        #     return
+        super().next()
+
+    def entry(self):
+        if len(self.df) &lt; 200:
+            return
+        k = self.now_k
+        o = k['o']
+        df = self.df
+        pre = df[:-1]
+        sdf = pre[-50:]
+        p100_max_wave = nake.max_wave(sdf)
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        hh = sdf['h'].max()
+        if len_yang &gt; len_yin and yang_sum &gt; yin_sum and yang_sum / yin_sum &gt; 1.2:
+            self.buy_long(o)
+
+    def handle_win(self):
+        k = self.now_k
+        df = self.df
+        pre = df[:-1]
+        o = k['o']
+        sec = self.df.iloc[-2]
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        if len_yin - len_yang &gt; 5:
+            self.close(o,'阴数多阳数')
+            return
+        if self.max_win() &gt; max_win:
+            self.close_profit(max_win, 'max win')
+            return
+
+    def handle_loss(self):
+        k = self.now_k
+        df = self.df
+        o = k['o']
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+
+        # if sec['c'] &lt; sec['low']:
+        #     self.close(o)
+        #     return
+        # if len_yin - len_yang &gt; 0:
+        #     self.close(o)
+        #     return
+        if self.max_loss_v2(pre.iloc[-1]) &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+    def handle_mid(self):
+        k = self.now_k
+        df = self.df
+        o = k['o']
+        pre = df[:-1]
+        sdf = pre[-50:]
+        yang_df = sdf.query('yy == True')
+        yin_df = sdf.query('yy == False')
+        yang_sum = yang_df['e'].sum()
+        yin_sum = yin_df['e'].sum()
+        len_yang = len(yang_df)
+        len_yin = len(yin_df)
+        # 卡中间的不处理
+        if len_yin - len_yang &gt; 5:
+            self.close(o, '阴数多阳数-中间')
+            return
+
+        if self.max_loss() &lt; max_loss_v:
+            self.close_profit(max_loss_v, '损 max')
+            return
+
+
+from util import timeutil as tu
+
+# path_dir = 'E:\\coding\\coin_data\\1d'
+# path_dir = 'E:\\coding\\coindata\\eth\\4h'
+# path_dir = 'E:\\coding\\coin_data\\btc\\4h'
+path_dir = &quot;E:\\coding\\coin_data\\bnb\\1h&quot;
+g = os.walk(path_dir)
+slash = &quot;\\&quot;
+if sys.platform != &quot;win32&quot;:
+    slash = &quot;/&quot;
+df_total = pd.DataFrame()
+for path, dir_list, file_list in g:
+    if path == path_dir:
+        for f in file_list:
+            if f.find(&quot;.csv&quot;) != -1:
+                fp = path + slash + f
+                out_df = pd.read_csv(fp, low_memory=False)
+                cs = out_df.columns
+                if cs[0] == &quot;open_time&quot;:
+                    out_df = pd.read_csv(fp, low_memory=False, header=0, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                else:
+                    out_df = pd.read_csv(fp, low_memory=False, header=None, usecols=[0, 1, 2, 3, 4, 5],
+                                         names=['t', 'o', 'h', 'l', 'c', 'v'])
+                out_df = out_df.sort_values('t', ascending=True)
+                dt = pd.to_numeric(out_df['t'])
+                out_df['t'] = dt
+                t2 = tu.now_ms()
+                h8 = 8 * 60 * 60 * 1000
+                out_df['ts'] = out_df['t'] + h8
+                out_df['date'] = pd.to_datetime(out_df['ts'], unit='ms')
+                df_total = pd.concat([df_total, out_df])
+
+out_df = df_total
+# df = df[4500:]
+# df = df[4500:]
+
+out_df = out_df.sort_values('t', ascending=True)
+dt = pd.to_numeric(out_df['t'])
+out_df['t'] = dt
+t2 = tu.now_ms()
+h8 = 8 * 60 * 60 * 1000
+out_df['t'] = out_df['t'] + h8
+out_df['date'] = pd.to_datetime(out_df['t'], unit='ms')
+out_df = nake.nake_convert(out_df)
+# out_df = boll.cal_boll(out_df,20)
+all = 10000
+margin = 3000
+leverage = 4
+# out_df = out_df[16000:]
+# out_df = out_df[8000:]
+# out_df = out_df[:]
+print(out_df.iloc[0]['date'])
+bt = ProTwo(out_df, all, margin, leverage, 5 / 10000)
+bt.run()
+total_win = bt.balance - all
+win_rate = 0
+if bt.entry_times &gt; 0:
+    win_rate = bt.win_times / bt.entry_times
+
+print(
+    f&quot;money {all} , profit: {total_win:.0f} times {bt.entry_times} fee {bt.total_commission:.0f} &quot;
+    f&quot; single  {margin}  win times {bt.win_times}  loss times {bt.loss_times} win rate {win_rate * 100:.2f}%&quot;
+    f&quot; pure win {bt.pure_win:.0f} pure loss {bt.pure_loss:.0f} leverage: {leverage} max win  {max_win}  max loss {max_loss_v:.2f}&quot;)
+t3 = tu.now_ms()
+print((t3 - t2) / 1000)
+output = pd.DataFrame(bt.orders)
+output.to_csv('record.csv')
+if bt.has_position:
+    print(bt.entry_price)
+    print(bt.side)
+    print(bt.order)
+</code></pre>
+<blockquote>
+<p>money 10000 , profit: 50068 times 122 fee 1464  single  3000  win times 63  loss times 59 win rate 51.64% pure win 96806 pure loss -45274 leverage: 4 max win  1.5  max loss -0.30</p>
+</blockquote>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>
