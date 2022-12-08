@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+
+    <title>小程序获取手机号码</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>小程序获取手机号码</h1>
+        </div>
+        <div>
+            <p>使用到的依赖</p>
+<ul>
+<li>hutool</li>
+<li>weixin-java-miniapp</li>
+</ul>
+<pre><code class="language-java">try {
+
+    String accessToken = wxMaService.getAccessToken();
+    log.info(accessToken);
+    String apiUrl = &quot;https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=&quot; + accessToken;
+
+    // 需要注意code数据必须以body进行传递 
+    JSONObject obj = JSONUtil.createObj();
+    // 这个code是小程序客户端那边获取发到服务器来的，用code换手机号
+    obj.put(&quot;code&quot;, param.getCode());
+    String body = HttpUtil.createPost(apiUrl).body(obj.toString()).execute().body();
+    log.info(body);
+    JSONObject jo = JSONUtil.parseObj(body);
+    JSONObject phoneInfo = jo.getJSONObject(&quot;phone_info&quot;);
+    if (phoneInfo != null) {
+        String phoneNumber = phoneInfo.getStr(&quot;phoneNumber&quot;);
+        String countryCode = phoneInfo.getStr(&quot;countryCode&quot;);
+        // 检查当前用户
+        Object loginId = StpWxUserUtil.getLoginId();
+        String openid = loginId.toString();
+        // 这块是我的业务内的处理，和小程序本身没关系
+        Wxuser wxuser = wxuserService.findByOpenid(openid);
+        if (wxuser != null) {
+            if (StringUtils.isBlank(wxuser.getPhoneNumber())) {
+                wxuser.setPhoneNumber(phoneNumber);
+                wxuser.setCountryCode(countryCode);
+                wxuserService.updateById(wxuser);
+            }
+        }
+        PhoneInfo pi = new PhoneInfo();
+        pi.setPhoneNumber(phoneNumber);
+        pi.setCountryCode(countryCode);
+        return pi;
+    }
+
+
+} catch (WxErrorException e) {
+    throw new RuntimeException(e);
+}
+return null;
+</code></pre>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>
