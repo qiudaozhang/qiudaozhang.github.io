@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+
+    <title>sentinel</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>sentinel</h1>
+        </div>
+        <div>
+            <h1 id="nacos">nacos中持久化</h1>
+<pre><code class="language-json">[
+    {
+        &quot;resource&quot;: &quot;/api/test/speed&quot;,
+        &quot;limitApp&quot;: &quot;default&quot;,
+        &quot;grade&quot;: 1,
+        &quot;count&quot;: 1,
+        &quot;strategy&quot;: 0,
+        &quot;controlBehavior&quot;: 0,
+        &quot;clusterMode&quot;: false
+    }
+]
+</code></pre>
+<pre><code>resource：资源名称；
+limitApp：来源应用；
+grade：阈值类型，0表示线程数，1表示QPS；
+count：单机阈值；
+strategy：流控模式，0表示直接，1表示关联，2表示链路；
+controlBehavior：流控效果，0表示快速失败，1表示Warm Up，2表示排队等待；
+clusterMode：是否集群。
+</code></pre>
+<p>我们可以实验配置count为1快速访问一个api试试</p>
+<p>然后修改count为10，如果可以的话，那就代表生效了。</p>
+<p>发现没有生效</p>
+<p><a href="https://imgse.com/i/zR5E9S"><img alt="zR5E9S.png" src="https://s1.ax1x.com/2022/12/09/zR5E9S.png" /></a></p>
+<p>在nacos中我们配置了，但是启动sentinel没有看到对应的规则</p>
+<p><a href="https://imgse.com/i/zR5nns"><img alt="zR5nns.png" src="https://s1.ax1x.com/2022/12/09/zR5nns.png" /></a></p>
+<p>网关中的yaml配置</p>
+<pre><code class="language-yaml">spring:
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8080
+      datasource:
+        ds1:
+          nacos:
+            namespace: ${nacosNamespace}
+            server-addr: ${nacosUrl}:8848
+            data-id: sentinel_rule
+            group-id: ${uccGroup}
+            data-type: json
+            rule-type: flow
+</code></pre>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>

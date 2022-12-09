@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/a11y-light.min.css"
+          integrity="sha512-WDk6RzwygsN9KecRHAfm9HTN87LQjqdygDmkHSJxVkVI7ErCZ8ZWxP6T8RvBujY1n2/E4Ac+bn2ChXnp5rnnHA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<!--    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.2/css/bootstrap-grid.css" rel="stylesheet">-->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="../meta_css//domain.css">
+
+    <title>okhttp5使用</title>
+</head>
+<body>
+<div>
+    <a href="https://qiudaozhang.github.io">首页</a>
+</div>
+
+<div class="row">
+    <div class="col-sm-2 col-2">
+        <!-- 左侧预留 -->
+    </div>
+    <div class="col-sm-8 col-8">
+        <div>
+            <h1>okhttp5使用</h1>
+        </div>
+        <div>
+            <h1 id="_1">依赖</h1>
+<pre><code class="language-xml">&lt;dependency&gt;
+    &lt;groupId&gt;com.squareup.okhttp3&lt;/groupId&gt;
+    &lt;artifactId&gt;okhttp&lt;/artifactId&gt;
+    &lt;version&gt;5.0.0-alpha.10&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;cn.hutool&lt;/groupId&gt;
+    &lt;artifactId&gt;hutool-all&lt;/artifactId&gt;
+    &lt;version&gt;5.8.10&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+<h1 id="post-body-demo">post body demo</h1>
+<pre><code class="language-java">import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import okhttp3.*;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Demo1 {
+
+    public static void main(String[] args) {
+
+        MediaType JSON = MediaType.get(&quot;application/json;charset=utf-8&quot;);
+        OkHttpClient client = new OkHttpClient();
+        JSONObject obj = JSONUtil.createObj();
+        obj.set(&quot;code&quot;, &quot;haha&quot;);
+        RequestBody body = RequestBody.create(obj.toString(), JSON);
+        // 访问的是我本地的一个后端端点
+        Request req = new Request.Builder()
+                .url(&quot;http://localhost:9200/wxmini/wx/user/login&quot;)
+                .post(body)
+                .build();
+        try {
+            Response response = client.newCall(req).execute();
+            String string = response.body().string();
+            System.out.println(string);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+}
+</code></pre>
+<h1 id="okhttp-util">okhttp util 构建</h1>
+<pre><code class="language-java">import okhttp3.*;
+
+import java.io.IOException;
+
+public class OkHttpUtil {
+    static final MediaType JSON = MediaType.get(&quot;application/json;charset=utf-8&quot;);
+
+
+    public static String postJsonBody(String url, String data) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(data, JSON);
+        Request req = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+</code></pre>
+<h1 id="demo1">demo1的简化</h1>
+<pre><code class="language-java">import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+
+public class Demo1 {
+
+    public static void main(String[] args) {
+        JSONObject obj = JSONUtil.createObj();
+        obj.set(&quot;code&quot;, &quot;haha&quot;);
+        String s = OkHttpUtil.postJsonBody(&quot;http://localhost:9200/wxmini/wx/user/login&quot;, obj.toString());
+        System.out.println(s);
+
+    }
+}
+</code></pre>
+<h1 id="post-param-demo">post param demo</h1>
+<pre><code class="language-java">/**
+ * post请求 form表单传参方式
+ *
+ * @param url
+ * @param data
+ * @return
+ */
+public static String postParam(String url, Map&lt;String, Object&gt; data) {
+    OkHttpClient client = new OkHttpClient();
+    FormBody.Builder builder = new FormBody.Builder();
+    Iterator&lt;Map.Entry&lt;String, Object&gt;&gt; it = data.entrySet().iterator();
+    while (it.hasNext()) {
+        Map.Entry&lt;String, Object&gt; next = it.next();
+        String key = next.getKey();
+        Object value = next.getValue();
+        builder.add(key, value.toString());
+    }
+    FormBody formBody = builder.build();
+    Request req = new Request.Builder().url(url)
+            .post(formBody).build();
+    try {
+        Response response = client.newCall(req).execute();
+        return response.body().string();
+    } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+}
+</code></pre>
+<h1 id="put">put 升级</h1>
+<pre><code class="language-java">import okhttp3.*;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+
+/**
+ * @author dao
+ * @since 2022-12-8
+ * &lt;p&gt;
+ * Okhttp请求封装工具类
+ */
+public class OkHttpUtil {
+    static final MediaType JSON = MediaType.get(&quot;application/json;charset=utf-8&quot;);
+
+    public static String postJsonBody(String url, String data) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(data, JSON);
+        Request req = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * post请求 form表单传参方式
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String postParam(String url, Map&lt;String, Object&gt; data) {
+        OkHttpClient client = new OkHttpClient();
+        FormBody formBody = param2FormBody(data);
+        Request req = new Request.Builder().url(url)
+                .post(formBody).build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * put请求 form表单传参方式
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String putParam(String url, Map&lt;String, Object&gt; data) {
+        OkHttpClient client = new OkHttpClient();
+        FormBody formBody = param2FormBody(data);
+        Request req = new Request.Builder().url(url)
+                .put(formBody).build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /**
+     * 参数转from body
+     *
+     * @param data
+     * @return
+     */
+    private static FormBody param2FormBody(Map&lt;String, Object&gt; data) {
+        FormBody.Builder builder = new FormBody.Builder();
+        Iterator&lt;Map.Entry&lt;String, Object&gt;&gt; it = data.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry&lt;String, Object&gt; next = it.next();
+            String key = next.getKey();
+            Object value = next.getValue();
+            builder.add(key, value.toString());
+        }
+        FormBody formBody = builder.build();
+        return formBody;
+    }
+
+
+}
+</code></pre>
+<h1 id="delete">delete</h1>
+<pre><code class="language-java">import okhttp3.*;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+
+/**
+ * @author dao
+ * @since 2022-12-8
+ * &lt;p&gt;
+ * Okhttp请求封装工具类
+ */
+public class OkHttpUtil {
+    static final MediaType JSON = MediaType.get(&quot;application/json;charset=utf-8&quot;);
+
+
+    /**
+     * post请求发送 json body 数据
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String postJsonBody(String url, String data) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(data, JSON);
+        Request req = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /**
+     * put 请求  json body 数据
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String putJsonBody(String url, String data) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(data, JSON);
+        Request req = new Request.Builder()
+                .url(url)
+                .put(body)
+                .build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /**
+     * post请求 form表单传参方式
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String postParam(String url, Map&lt;String, Object&gt; data) {
+        OkHttpClient client = new OkHttpClient();
+        FormBody formBody = param2FormBody(data);
+        Request req = new Request.Builder().url(url)
+                .post(formBody).build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * put请求 form表单传参方式
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    public static String putParam(String url, Map&lt;String, Object&gt; data) {
+        OkHttpClient client = new OkHttpClient();
+        FormBody formBody = param2FormBody(data);
+        Request req = new Request.Builder().url(url)
+                .put(formBody).build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /**
+     * delete 请求
+     *
+     * @param url
+     * @return
+     */
+    public static String delete(String url) {
+        OkHttpClient client = new OkHttpClient();
+        Request req = new Request.Builder().url(url).delete().build();
+        try {
+            Response response = client.newCall(req).execute();
+            return response.body().string();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /**
+     * 参数转from body
+     *
+     * @param data
+     * @return
+     */
+    private static FormBody param2FormBody(Map&lt;String, Object&gt; data) {
+        FormBody.Builder builder = new FormBody.Builder();
+        Iterator&lt;Map.Entry&lt;String, Object&gt;&gt; it = data.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry&lt;String, Object&gt; next = it.next();
+            String key = next.getKey();
+            Object value = next.getValue();
+            builder.add(key, value.toString());
+        }
+        FormBody formBody = builder.build();
+        return formBody;
+    }
+
+
+}
+</code></pre>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"
+        integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 代码高亮 -->
+<script>hljs.highlightAll();</script>
+</body>
+</html>
